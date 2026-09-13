@@ -45,8 +45,7 @@
      screens) + cleanup tracking so every interval/listener dies
      with the map.
      ============================================================ */
-  function makeShell(container, mapIdx) {
-    var map = MAPS[mapIdx];
+  function makeShell(container, map, sectorNum, sectorTotal) {
     var dead = false, cleanups = [], winTO = null, restartFn = null;
 
     container.innerHTML = "";
@@ -54,12 +53,12 @@
     root.className = "mg-root scan-grid";
     root.innerHTML =
       '<div class="mg-head">' +
-        '<span class="mg-cat">SECTOR ' + pad2(mapIdx + 1) + "/" + MAPS.length + " // " + esc(map.category) + "</span>" +
+        '<span class="mg-cat">SECTOR ' + pad2(sectorNum) + "/" + sectorTotal + " // " + esc(map.category) + "</span>" +
         '<span class="mg-name">' + esc(map.name) + "</span>" +
       "</div>" +
       '<div class="mg-body"></div>' +
       '<div class="mg-foot"><span class="mg-status">STANDBY</span>' +
-        '<span class="mg-hint">WORMROUTE SECTOR ' + pad2(mapIdx + 1) + "</span></div>";
+        '<span class="mg-hint">WORMROUTE SECTOR ' + pad2(sectorNum) + "</span></div>";
     container.appendChild(root);
 
     var body = root.querySelector(".mg-body");
@@ -160,8 +159,7 @@
   var W = 46;
   var CX = 23, R = 7;            /* circular staging room center + radius */
 
-  function bootWormRoute(container, mapIdx, onComplete) {
-    var map = MAPS[mapIdx];
+  function bootWormRoute(container, map, sectorNum, sectorTotal, onComplete) {
     var STEP_MS = map.ms;
     var SNAKE_LEN = map.wormLen;
     var TUNNEL_LEN = map.len;
@@ -174,8 +172,8 @@
     var START_Y = CY - R - 1;         /* first conduit row, mouth above the room */
     var END_Y = START_Y - TUNNEL_LEN; /* last conduit row */
 
-    var shell = makeShell(container, mapIdx);
-    shell.setRestart(function () { bootWormRoute(container, mapIdx, onComplete); });
+    var shell = makeShell(container, map, sectorNum, sectorTotal);
+    shell.setRestart(function () { bootWormRoute(container, map, sectorNum, sectorTotal, onComplete); });
 
     /* Cool route: the conduit climbs as a 5x5-cross-section tube whose
        centre line sweeps left/right in smooth switchback waves all the
@@ -285,9 +283,8 @@
     function win() {
       over = true;
       shell.status("EXFIL NODE REACHED - ROUTE COMPLETE", "ok");
-      var lastMap = mapIdx >= MAPS.length - 1;
-      shell.win(function () { onComplete(mapIdx + 1); },
-        lastMap ? "NETWORK BREACHED" : "SECTOR CLEAR");
+      var lastMap = sectorNum >= sectorTotal;
+      shell.win(onComplete, lastMap ? "NETWORK BREACHED" : "SECTOR CLEAR");
     }
 
     function step() {
@@ -404,48 +401,90 @@
      the final screen. Progress persists in localStorage so the
      run resumes where the player left off.
      ============================================================ */
-  var SAVE_KEY = "wormroute.progress";
+  var SESSION_SIZE = 3;
+  var SAVE_KEY = "wormroute.session";
   var container = document.getElementById("game");
   var current = null;
+  var sessionMaps = [];
+  var sessionPos = 0;
 
-  function loadProgress() {
+  /* Random sample of SESSION_SIZE distinct map indices (Fisher-Yates). */
+  function pickSession() {
+    var idx = [], i;
+    for (i = 0; i < MAPS.length; i++) idx.push(i);
+    for (i = MAPS.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = idx[i]; idx[i] = idx[j]; idx[j] = t;
+    }
+    return idx.slice(0, SESSION_SIZE);
+  }
+
+  function loadSession() {
     try {
-      var v = parseInt(localStorage.getItem(SAVE_KEY), 10);
-      if (!isNaN(v) && v >= 0 && v < MAPS.length) return v;
+      var raw = localStorage.getItem(SAVE_KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s && Array.isArray(s.list) && s.list.length === SESSION_SIZE &&
+            typeof s.pos === "number") {
+          var ok = true, seen = {}, m, k;
+          for (k = 0; k < s.list.length; k++) {
+            m = s.list[k];
+            if (typeof m !== "number" || m < 0 || m >= MAPS.length || seen[m]) { ok = false; break; }
+            seen[m] = true;
+          }
+          if (ok && s.pos >= 0 && s.pos < SESSION_SIZE) {
+            sessionMaps = s.list;
+            sessionPos = s.pos;
+            return;
+          }
+        }
+      }
     } catch (e) { /* ignore */ }
-    return 0;
-  }
-  function saveProgress(idx) {
-    try { localStorage.setItem(SAVE_KEY, String(idx)); } catch (e) { /* ignore */ }
+    sessionMaps = pickSession();
+    sessionPos = 0;
   }
 
-  function start(mapIdx) {
+  function saveSession() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ list: sessionMaps, pos: sessionPos }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function start() {
     if (current) current.destroy();
-    saveProgress(mapIdx);
-    current = bootWormRoute(container, mapIdx, function (nextIdx) {
-      if (nextIdx >= MAPS.length) showVictory();
-      else start(nextIdx);
+    saveSession();
+    var map = MAPS[sessionMaps[sessionPos]];
+    current = bootWormRoute(container, map, sessionPos + 1, SESSION_SIZE, function () {
+      sessionPos++;
+      if (sessionPos >= sessionMaps.length) showVictory();
+      else start();
     });
   }
 
   function showVictory() {
-    saveProgress(0);
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
     if (current) { current.destroy(); current = null; }
     container.innerHTML =
       '<div class="mg-root scan-grid">' +
-        '<div class="mg-head"><span class="mg-cat">SECTOR ' + pad2(MAPS.length) + "/" + MAPS.length + ' // CORE VAULT</span>' +
-          '<span class="mg-name">TERMINAL VELOCITY</span></div>' +
+        '<div class="mg-head"><span class="mg-cat">SECTOR ' + pad2(SESSION_SIZE) + "/" + SESSION_SIZE + ' // CORE VAULT</span>' +
+          '<span class="mg-name">SESSION COMPLETE</span></div>' +
         '<div class="mg-body">' +
           '<div class="mg-win glitch green" data-text="NETWORK BREACHED">NETWORK BREACHED</div>' +
-          '<div class="mg-final-note">ALL ' + MAPS.length + ' SECTORS CLEAR — THE DATA WORM IS HOME</div>' +
+          '<div class="mg-final-note">' + SESSION_SIZE + ' OF ' + MAPS.length + ' ROUTES CLEAR — THIS SESSION IS DONE</div>' +
           '<div style="text-align:center"><button class="btn-dos mg-retry" id="btn-again">[ RUN AGAIN ]</button></div>' +
         "</div>" +
         '<div class="mg-foot"><span class="mg-status">STANDBY</span>' +
-          '<span class="mg-hint">WORMROUTE SECTOR ' + pad2(MAPS.length) + "</span></div>" +
+          '<span class="mg-hint">WORMROUTE SESSION COMPLETE</span></div>' +
       "</div>";
-    document.getElementById("btn-again").addEventListener("click", function () { start(0); });
+    document.getElementById("btn-again").addEventListener("click", function () {
+      sessionMaps = pickSession();
+      sessionPos = 0;
+      start();
+    });
   }
 
-  /* Boot immediately when the page opens — resume at the saved sector. */
-  start(loadProgress());
+  /* Boot immediately when the page opens — resume the saved session,
+     or start a fresh random 3-route session. */
+  loadSession();
+  start();
 })();

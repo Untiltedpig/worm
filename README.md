@@ -24,11 +24,14 @@ fully offline from a file, a USB stick, or any static host.
 - Climb out of the staging room into the 5-wide conduit above.
 - Reach the amber **EXFIL** pad at the top of the tunnel. Don't touch the walls.
 
-## The 10 sectors
+## Sessions — pick 3 of the 10 routes
 
-Winning a sector auto-advances to the next. Progress is saved in
-`localStorage`, so reopening the page resumes at the sector you reached.
-Clearing all 10 shows the **NETWORK BREACHED** victory screen.
+Every session randomly draws **3** of the 10 worm routes and walks you
+through them in sequence. Winning a route auto-advances to the next.
+Progress within the session is saved in `localStorage`, so reopening the
+page resumes the same 3 routes where you left off. Clearing all 3 shows
+the **NETWORK BREACHED** victory screen; **RUN AGAIN** deals a fresh
+random 3-route session.
 
 | # | Sector | Tunnel | Notes |
 |---|----------------|--------|-----------------------------------|
