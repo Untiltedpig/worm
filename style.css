@@ -1,0 +1,135 @@
+/* ============================================================
+   WORMROUTE — STANDALONE THEME (style.css)
+   90s phosphor-green CRT theme. Only the styles this game uses.
+   ============================================================ */
+:root {
+  --bg:   #000000;
+  --bg2:  #020e07;
+  --bg3:  #04160c;
+  --g1:   #14552b;   /* dim border green */
+  --g2:   #2ac763;   /* mid phosphor */
+  --g3:   #3bff7a;   /* bright phosphor */
+  --g4:   #cfffe1;   /* near-white green */
+  --red:  #ff3030;
+  --amber:#ffb000;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--g3);
+}
+body {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", "Courier New", monospace;
+  margin: 0;
+  padding: 2rem 1rem 3rem;
+}
+::selection { background: var(--g3); color: #000; }
+
+/* ---------- CRT overlays ---------- */
+.scanlines {
+  position: fixed; inset: 0; z-index: 90; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.30) 0 1px, transparent 1px 3px);
+}
+.crtflicker {
+  position: fixed; inset: 0; z-index: 89; pointer-events: none;
+  background: transparent; animation: flick .11s infinite;
+}
+.vignette {
+  position: fixed; inset: 0; z-index: 88; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,8,3,.6) 100%);
+}
+@keyframes flick {
+  0% { opacity: .025; }
+  50% { opacity: .06; }
+  100% { opacity: .025; }
+}
+
+/* ---------- DOS buttons ---------- */
+.btn-dos {
+  font-family: inherit; background: transparent; color: var(--g3);
+  border: 1px solid var(--g2); padding: .5rem 1.1rem;
+  text-transform: uppercase; letter-spacing: .12em; font-size: 13px;
+  cursor: pointer; transition: none; text-align: center;
+}
+.btn-dos:hover { background: rgba(59,255,122,.13); box-shadow: 0 0 12px rgba(59,255,122,.35); }
+.btn-dos:active { transform: translateY(1px); }
+
+/* ---------- glitch text ---------- */
+.glitch { position: relative; }
+.glitch::before, .glitch::after { content: attr(data-text); position: absolute; inset: 0; overflow: hidden; }
+.glitch::before { color: var(--red); animation: glitchA 2.4s infinite steps(2); clip-path: inset(0 0 55% 0); }
+.glitch::after  { color: #ffd6d6; animation: glitchB 2.4s infinite steps(2); clip-path: inset(55% 0 0 0); }
+.glitch.green::before { color: var(--g3); }
+.glitch.green::after { color: var(--g4); }
+@keyframes glitchA {
+  0%, 91%, 100% { transform: translate(0,0); opacity: 0; }
+  92% { transform: translate(-3px, 1px); opacity: .7; }
+  94% { transform: translate(2px, -1px); opacity: .5; }
+  96% { transform: translate(-2px, 1px); opacity: .6; }
+}
+@keyframes glitchB {
+  0%, 88%, 100% { transform: translate(0,0); opacity: 0; }
+  89% { transform: translate(3px, -1px); opacity: .6; }
+  92% { transform: translate(-3px, 1px); opacity: .4; }
+  95% { transform: translate(2px, -1px); opacity: .5; }
+}
+
+/* ---------- scanning grid ambience ---------- */
+.scan-grid {
+  background-image:
+    linear-gradient(rgba(42,199,99,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(42,199,99,.06) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+/* ---------- module frame ---------- */
+.mg-root { position: relative; max-width: 780px; margin: 0 auto; }
+.mg-head, .mg-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  border: 1px solid var(--g1); padding: .4rem .8rem;
+  font-size: 11px; letter-spacing: .18em; background: rgba(42,199,99,.05);
+}
+.mg-head { border-bottom: none; }
+.mg-foot { border-top: none; color: var(--g1); background: rgba(42,199,99,.03); }
+.mg-cat { color: var(--amber); }
+.mg-name { color: var(--g3); text-align: right; overflow: hidden; white-space: nowrap; }
+.mg-body { border: 1px solid var(--g1); padding: 1rem; background: rgba(2,14,7,.65); min-height: 430px; }
+.mg-status.ok { color: var(--g3); }
+.mg-status.bad { color: var(--red); }
+.mg-hint { color: var(--g1); letter-spacing: .1em; }
+
+/* ---------- win / fail screens ---------- */
+.mg-win {
+  text-align: center; padding: 3.2rem 0;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", "Courier New", monospace;
+  font-size: clamp(2.4rem, 6vw, 4rem); letter-spacing: .1em; color: var(--g3);
+}
+.mg-failbox { text-align: center; padding: 2.6rem 0; }
+.mg-failtitle {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", "Courier New", monospace;
+  font-size: clamp(2rem, 5vw, 3.2rem); letter-spacing: .1em; color: var(--red);
+}
+.mg-failreason { color: var(--g2); margin: .7rem 0 1.5rem; font-size: 13px; }
+.mg-retry { font-size: 15px; padding: .7rem 2.4rem; }
+.mg-final-note { color: var(--amber); letter-spacing: .22em; font-size: 12px; margin-bottom: 1.4rem; }
+
+/* ---------- worm-route snake tunnel ---------- */
+.mg-worm { text-align: center; }
+.mg-worm-canvas {
+  display: block; margin: 0 auto; width: 100%; max-width: 736px; height: auto;
+  border: 1px solid var(--g1); background: #02130a;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
+.mg-worm-hud {
+  display: flex; align-items: center; gap: 1rem;
+  font-size: 12px; letter-spacing: .18em; color: var(--g2);
+  border: 1px solid var(--g1); border-bottom: none; padding: .35rem .6rem;
+  margin: 0 auto; max-width: 736px; text-align: left;
+}
+.mg-worm-label { color: var(--amber); }
+.mg-worm-state { color: var(--g3); }
+.mg-worm-progress { color: var(--amber); margin-left: auto; }
+.mg-worm-hint {
+  margin: .7rem auto 0; max-width: 736px; text-align: center;
+  font-size: 11px; letter-spacing: .12em; color: var(--g1); line-height: 1.7;
+}
